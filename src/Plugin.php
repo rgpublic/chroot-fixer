@@ -53,16 +53,18 @@ class Plugin implements PluginInterface, EventSubscriberInterface
 
             $contents = file_get_contents($file);
 
-// Fix Drupal-style broken paths: '/' . '/web/...', '/' . '//web/...'
-$contents = preg_replace(
-    "#'/'\s*\.\s*'/+([^']+)'#",
-    "__DIR__ . '/../../$1'",
-    $contents
-);
+            // Fix Drupal-style broken paths: '/' . '/web/...', '/' . '//web/...'
+            $contents = preg_replace(
+                "#'/'\s*\.\s*'/+([^']+)'#",
+                "__DIR__ . '/../../$1'",
+                $contents
+            );
 
-if (basename($file) === 'autoload_static.php') {
-	$contents.="require_once(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php');";
-}
+            if (basename($file) === 'autoload_static.php') {
+                $contents.="if (is_file(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php')) {";
+            	$contents.="    require_once(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php');";
+                $contents.="}";
+            }
 
             file_put_contents($file, $contents);
             $io->write("<info>ChrootFixer: fixed $file</info>");
