@@ -2,7 +2,7 @@
   "name": "pw6/chroot-fixer",
   "description": "Fixes absolute paths in Composer's static autoload files for chrooted and non-chrooted environments.",
   "type": "composer-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "require": {
     "composer-plugin-api": "^2.0"
   },
