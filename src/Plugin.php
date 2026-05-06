@@ -54,9 +54,11 @@ class Plugin implements PluginInterface, EventSubscriberInterface
             $contents = file_get_contents($file);
 
             // Fix Drupal-style broken paths: '/' . '/web/...', '/' . '//web/...'
+            // Note: This code is sometimes loaded via eval an __DIR__ is replaced with the fixed plugin path.
+            // We don't want that so we obfuscate the __DIR__ constant by concatenation.
             $contents = preg_replace(
                 "#'/'\s*\.\s*'/+([^']+)'#",
-                "__DIR__ . '/../../$1'",
+                "__D"."IR__ . '/../../$1'",
                 $contents
             );
 
