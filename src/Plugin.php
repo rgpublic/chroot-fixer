@@ -61,9 +61,9 @@ class Plugin implements PluginInterface, EventSubscriberInterface
             );
 
             if (basename($file) === 'autoload_static.php') {
-                $contents.="if (is_file(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php')) {";
-            	$contents.="    require_once(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php');";
-                $contents.="}";
+                $contents.="if (is_file(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php')) {\n";
+            	$contents.="    require_once(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php');\n";
+                $contents.="}\n";
             }
 
             file_put_contents($file, $contents);
