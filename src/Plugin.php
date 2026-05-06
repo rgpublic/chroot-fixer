@@ -69,7 +69,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
             }
 
             file_put_contents($file, $contents);
-            $io->write("<info>ChrootFixer: fixed $file</info>");
+            $io->write("<info>ChrootFixer: fixed ".ltrim($file,'/')."</info>");
         }
     }
 }
