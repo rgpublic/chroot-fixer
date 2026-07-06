@@ -34,10 +34,30 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     public function onPostAutoloadDump(Event $event)
     {
         $io = $event->getIO();
-        $io->write("<info>ChrootFixer: normalizing static autoload paths</info>");
-
         $composer = $event->getComposer();
         $vendorDir = $composer->getConfig()->get('vendor-dir');
+        $projectRoot = dirname($vendorDir);
+
+        // --- Fix index.php SCRIPT_FILENAME (Drupal 11.4+ / symfony/runtime) ---
+        $webRoot = $composer->getPackage()->getExtra()['drupal-scaffold']['locations']['web-root'] ?? 'web';
+        $indexFile = $projectRoot . '/' . trim($webRoot, '/') . '/index.php';
+
+        if (file_exists($indexFile)) {
+            $indexContents = file_get_contents($indexFile);
+            $needle = "require_once 'autoload_runtime.php';";
+            if (strpos($indexContents, $needle) !== false && strpos($indexContents, "SCRIPT_FILENAME") === false) {
+                $patched = str_replace(
+                    $needle,
+                    "\$_SERVER['SCRIPT_FILENAME'] = __FILE__;\n{$needle}",
+                    $indexContents
+                );
+                file_put_contents($indexFile, $patched);
+                $io->write("<info>ChrootFixer: injected SCRIPT_FILENAME override in {$webRoot}/index.php</info>");
+            }
+        }
+
+        $io->write("<info>ChrootFixer: normalizing static autoload paths</info>");
+
         $composerDir = $vendorDir . '/composer';
 
         $files = [
@@ -64,7 +84,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
 
             if (basename($file) === 'autoload_static.php') {
                 $contents.="if (is_file(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php')) {\n";
-            	$contents.="    require_once(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php');\n";
+                $contents.="    require_once(dirname(__FILE__).'/../pw6/chroot-fixer/src/DrushDrupalFinder.php');\n";
                 $contents.="}\n";
             }
 
