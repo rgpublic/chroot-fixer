@@ -1,33 +1,25 @@
 <?php
-
 namespace Pw6\ChrootFixer;
 
 use Composer\Plugin\PluginInterface;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Script\ScriptEvents;
 use Composer\Script\Event;
+use Composer\Composer;
+use Composer\IO\IOInterface;
+use Drupal\Composer\Plugin\Scaffold\Handler as ScaffoldPluginHandler;
 
 class Plugin implements PluginInterface, EventSubscriberInterface
 {
-    public function activate(\Composer\Composer $composer, \Composer\IO\IOInterface $io)
-    {
-        // Noting needed here
-    }
-
-    public function deactivate(\Composer\Composer $composer, \Composer\IO\IOInterface $io)
-    {
-        // Nothing needed here
-    }
-
-    public function uninstall(\Composer\Composer $composer, \Composer\IO\IOInterface $io)
-    {
-        // Nothing needed here
-    }
+    public function activate(Composer $composer, IOInterface $io) {}
+    public function deactivate(Composer $composer, IOInterface $io) {}
+    public function uninstall(Composer $composer, IOInterface $io) {}
 
     public static function getSubscribedEvents()
     {
         return [
             ScriptEvents::POST_AUTOLOAD_DUMP => 'onPostAutoloadDump',
+            ScaffoldPluginHandler::POST_DRUPAL_SCAFFOLD_CMD => 'onPostScaffoldDone',
         ];
     }
 
@@ -36,25 +28,6 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         $io = $event->getIO();
         $composer = $event->getComposer();
         $vendorDir = $composer->getConfig()->get('vendor-dir');
-        $projectRoot = dirname($vendorDir);
-
-        // --- Fix index.php SCRIPT_FILENAME (Drupal 11.4+ / symfony/runtime) ---
-        $webRoot = $composer->getPackage()->getExtra()['drupal-scaffold']['locations']['web-root'] ?? 'web';
-        $indexFile = $projectRoot . '/' . trim($webRoot, '/') . '/index.php';
-
-        if (file_exists($indexFile)) {
-            $indexContents = file_get_contents($indexFile);
-            $needle = "require_once 'autoload_runtime.php';";
-            if (strpos($indexContents, $needle) !== false && strpos($indexContents, "SCRIPT_FILENAME") === false) {
-                $patched = str_replace(
-                    $needle,
-                    "\$_SERVER['SCRIPT_FILENAME'] = __FILE__;\n{$needle}",
-                    $indexContents
-                );
-                file_put_contents($indexFile, $patched);
-                $io->write("<info>ChrootFixer: injected SCRIPT_FILENAME override in {$webRoot}/index.php</info>");
-            }
-        }
 
         $io->write("<info>ChrootFixer: normalizing static autoload paths</info>");
 
@@ -90,6 +63,32 @@ class Plugin implements PluginInterface, EventSubscriberInterface
 
             file_put_contents($file, $contents);
             $io->write("<info>ChrootFixer: fixed ".ltrim($file,'/')."</info>");
+        }
+    }
+
+    public function onPostScaffoldDone(Event $event)
+    {
+        $io = $event->getIO();
+        $composer = $event->getComposer();
+        $projectRoot = dirname(\Composer\Factory::getComposerFile());
+
+        $webRoot = $composer->getPackage()->getExtra()['drupal-scaffold']['locations']['web-root'] ?? 'web';
+        $indexFile = $projectRoot . '/' . trim($webRoot, '/') . '/index.php';
+
+        if (!file_exists($indexFile)) {
+            return;
+        }
+
+        $indexContents = file_get_contents($indexFile);
+        $needle = "require_once 'autoload_runtime.php';";
+        if (strpos($indexContents, $needle) !== false && strpos($indexContents, "SCRIPT_FILENAME") === false) {
+            $patched = str_replace(
+                $needle,
+                "\$_SERVER['SCRIPT_FILENAME'] = __FILE__;\n{$needle}",
+                $indexContents
+            );
+            file_put_contents($indexFile, $patched);
+            $io->write("<info>ChrootFixer: injected SCRIPT_FILENAME override in {$webRoot}/index.php</info>");
         }
     }
 }
