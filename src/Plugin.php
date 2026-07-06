@@ -84,7 +84,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         if (strpos($indexContents, $needle) !== false && strpos($indexContents, "SCRIPT_FILENAME") === false) {
             $patched = str_replace(
                 $needle,
-                "\$_SERVER['SCRIPT_FILENAME'] = __FILE__;\n{$needle}",
+                "\$_SERVER['SCRIPT_FILENAME'] = __F"."ILE__;\n{$needle}",
                 $indexContents
             );
             file_put_contents($indexFile, $patched);
